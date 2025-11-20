@@ -2,7 +2,6 @@ package br.com.danielcamelo.sistema_de_reservas.entity;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
-import java.util.Set;
 
 @Entity
 @Table(name = "RESERVA")
@@ -10,44 +9,44 @@ public class Reserva {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "idReserva")
     private Integer id;
 
-    @Column(name = "data_inicio")
-    private LocalDateTime dataInicio;
+    @Column(name = "data", nullable = false)
+    private LocalDateTime data;
 
-    @Column(name = "data_fim")
-    private LocalDateTime dataFim;
-
-    @Column(name = "status")
-    private String status;
-
-
-    @ManyToOne
-    @JoinColumn(name = "id_sala") // Nome da sua coluna de chave estrangeira para a sala
-    private Sala sala;
-
-    @ManyToMany
-    @JoinTable(
-            name = "RESERVA_EQUIPAMENTO", // O nome exato da sua tabela de ligação no DDL
-            joinColumns = @JoinColumn(name = "id_reserva"), // Coluna que aponta para Reserva
-            inverseJoinColumns = @JoinColumn(name = "id_equipamento") // Coluna que aponta para Equipamento
-    )
-    private Set<Equipamento> equipamentos;
-
-    public Reserva() {
-    }
-
-    @ManyToOne
-    @JoinColumn(name = "id_professor", nullable = false) // nullable = false torna obrigatório
-    private Professor professor;
-
-    @ManyToOne
-    @JoinColumn(name = "id_coordenacao", nullable = true) // nullable = true torna opcional
-    private Coordenacao coordenacao;
+    @Column(name = "relatorio")
+    private String relatorio;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "criadaPor", nullable = false)
-    private TipoCriador criadaPor; // (Este é o Enum que criámos)
+    private TipoCriador criadaPor;
+
+    // --- RELACIONAMENTOS (FKs) ---
+
+    @ManyToOne
+    @JoinColumn(name = "fk_idSala", nullable = false)
+    private Sala sala;
+
+    @ManyToOne
+    @JoinColumn(name = "fk_idProfessor", nullable = false)
+    private Professor professor;
+
+    @ManyToOne
+    @JoinColumn(name = "fk_idCoordenacao", nullable = true) // Opcional
+    private Coordenacao coordenacao;
+
+    // CORREÇÃO PRINCIPAL: Equipamento no singular (Muitos-para-Um)
+    // Uma reserva tem UM equipamento associado (conforme sua FK fk_idEquipamento)
+    @ManyToOne
+    @JoinColumn(name = "fk_idEquipamento")
+    private Equipamento equipamento;
+
+    // --- Construtor Vazio ---
+    public Reserva() {
+    }
+
+    // --- Getters e Setters ---
 
     public Integer getId() {
         return id;
@@ -57,52 +56,20 @@ public class Reserva {
         this.id = id;
     }
 
-    public LocalDateTime getDataInicio() {
-        return dataInicio;
+    public LocalDateTime getDataReserva() {
+        return data;
     }
 
-    public void setDataInicio(LocalDateTime dataInicio) {
-        this.dataInicio = dataInicio;
+    public void setDataReserva(LocalDateTime dataReserva) {
+        this.data = dataReserva;
     }
 
-    public LocalDateTime getDataFim() {
-        return dataFim;
+    public String getRelatorio() {
+        return relatorio;
     }
 
-    public void setDataFim(LocalDateTime dataFim) {
-        this.dataFim = dataFim;
-    }
-
-    public String getStatus() {
-        return status;
-    }
-
-    public void setStatus(String status) {
-        this.status = status;
-    }
-
-    public Sala getSala() {
-        return sala;
-    }
-
-    public void setSala(Sala sala) {
-        this.sala = sala;
-    }
-
-    public Set<Equipamento> getEquipamentos() {
-        return equipamentos;
-    }
-
-    public void setEquipamentos(Set<Equipamento> equipamentos) {
-        this.equipamentos = equipamentos;
-    }
-
-    public Coordenacao getCoordenacao() {
-        return coordenacao;
-    }
-
-    public void setCoordenacao(Coordenacao coordenacao) {
-        this.coordenacao = coordenacao;
+    public void setRelatorio(String relatorio) {
+        this.relatorio = relatorio;
     }
 
     public TipoCriador getCriadaPor() {
@@ -113,11 +80,35 @@ public class Reserva {
         this.criadaPor = criadaPor;
     }
 
+    public Sala getSala() {
+        return sala;
+    }
+
+    public void setSala(Sala sala) {
+        this.sala = sala;
+    }
+
     public Professor getProfessor() {
         return professor;
     }
 
     public void setProfessor(Professor professor) {
         this.professor = professor;
+    }
+
+    public Coordenacao getCoordenacao() {
+        return coordenacao;
+    }
+
+    public void setCoordenacao(Coordenacao coordenacao) {
+        this.coordenacao = coordenacao;
+    }
+
+    public Equipamento getEquipamento() {
+        return equipamento;
+    }
+
+    public void setEquipamento(Equipamento equipamento) {
+        this.equipamento = equipamento;
     }
 }

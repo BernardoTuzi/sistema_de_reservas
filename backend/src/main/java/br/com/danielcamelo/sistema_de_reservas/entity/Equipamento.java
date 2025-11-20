@@ -1,5 +1,6 @@
 package br.com.danielcamelo.sistema_de_reservas.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import java.util.Set;
 
@@ -9,15 +10,17 @@ public class Equipamento {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "idEquipamento")
     private Integer id;
 
-    @Column(name = "nome", nullable = false)
+    @Column(name = "nomeEquipamento", nullable = false)
     private String nome;
 
-    @Column(name = "descricao")
-    private String descricao;
+    @Column(name = "quantidadeEquipamento")
+    private Integer quantidade;
 
-    @ManyToMany(mappedBy = "equipamentos")
+    @ManyToMany(mappedBy = "equipamento")
+    @JsonIgnore
     private Set<Reserva> reservas;
 
     public Equipamento() {
@@ -39,12 +42,12 @@ public class Equipamento {
         this.nome = nome;
     }
 
-    public String getDescricao() {
-        return descricao;
+    public Integer getQuantidade() {
+        return quantidade;
     }
 
-    public void setDescricao(String descricao) {
-        this.descricao = descricao;
+    public void setQuantidade(Integer quantidade) {
+        this.quantidade = quantidade;
     }
 
     public Set<Reserva> getReservas() {

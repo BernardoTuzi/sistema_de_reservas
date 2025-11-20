@@ -16,22 +16,21 @@ public class SalaController {
     private SalaService salaService;
 
     @GetMapping
-    public List<Sala> listarTodasSalas() {
+    public List<Sala> listarTodas() {
         return salaService.listarTodas();
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Sala> buscarSalaPorId(@PathVariable Integer id) {
+    public ResponseEntity<Sala> buscarPorId(@PathVariable Integer id) {
         Sala sala = salaService.buscarPorId(id);
         if (sala != null) {
             return ResponseEntity.ok(sala);
-        } else {
-            return ResponseEntity.notFound().build();
         }
+        return ResponseEntity.notFound().build();
     }
 
     @PostMapping
-    public Sala criarSala(@RequestBody Sala sala) {
+    public Sala criar(@RequestBody Sala sala) {
         return salaService.salvar(sala);
     }
 }

@@ -8,30 +8,30 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+// --- ESTAS DUAS ANOTAÇÕES SÃO OBRIGATÓRIAS ---
 @RestController
-@RequestMapping("/api/equipamentos")
+@RequestMapping("/api/equipamentos") // O endereço é PLURAL
 public class EquipamentoController {
 
     @Autowired
     private EquipamentoService equipamentoService;
 
     @GetMapping
-    public List<Equipamento> listarTodosEquipamentos() {
+    public List<Equipamento> listarTodos() {
         return equipamentoService.listarTodos();
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Equipamento> buscarEquipamentoPorId(@PathVariable Integer id) {
+    public ResponseEntity<Equipamento> buscarPorId(@PathVariable Integer id) {
         Equipamento equipamento = equipamentoService.buscarPorId(id);
         if (equipamento != null) {
             return ResponseEntity.ok(equipamento);
-        } else {
-            return ResponseEntity.notFound().build();
         }
+        return ResponseEntity.notFound().build();
     }
 
     @PostMapping
-    public Equipamento criarEquipamento(@RequestBody Equipamento equipamento) {
+    public Equipamento criar(@RequestBody Equipamento equipamento) {
         return equipamentoService.salvar(equipamento);
     }
 }

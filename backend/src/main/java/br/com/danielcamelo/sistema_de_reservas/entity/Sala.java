@@ -1,5 +1,6 @@
 package br.com.danielcamelo.sistema_de_reservas.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import java.util.Set;
 
@@ -9,19 +10,24 @@ public class Sala {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "idSala") // Nome exato no banco
     private Integer id;
 
-    @Column(name = "nome", nullable = false) // "nullable = false" diz que este campo é obrigatório
+    @Column(name = "nomeSala", nullable = false) // Nome exato
     private String nome;
 
-    @Column(name = "capacidade")
+    @Column(name = "capacidadeSala") // Nome exato
     private Integer capacidade;
 
     @OneToMany(mappedBy = "sala")
+    @JsonIgnore
     private Set<Reserva> reservas;
 
+    // --- Construtor Vazio ---
     public Sala() {
     }
+
+    // --- Getters e Setters ---
 
     public Integer getId() {
         return id;

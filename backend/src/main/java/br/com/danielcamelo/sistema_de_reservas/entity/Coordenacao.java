@@ -10,6 +10,7 @@ public class Coordenacao {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "idCoordenacao")
     private Integer idCoordenacao;
 
     @Column(name = "nomeCoordenacao", nullable = false)
