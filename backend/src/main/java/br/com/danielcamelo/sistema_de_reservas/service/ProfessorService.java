@@ -18,12 +18,15 @@ public class ProfessorService {
     }
 
     public Professor buscarPorId(Integer id) {
-
         return professorRepository.findById(id).orElse(null);
     }
 
-
     public Professor salvar(Professor professor) {
         return professorRepository.save(professor);
+    }
+
+    // --- ESTE É O MÉTODO QUE ESTAVA FALTANDO ---
+    public void deletar(Integer id) {
+        professorRepository.deleteById(id);
     }
 }

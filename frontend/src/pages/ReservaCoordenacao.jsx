@@ -14,26 +14,23 @@ const styles = {
     btnConfirmar: { backgroundColor: '#88B083', padding: '10px 30px', border: 'none', borderRadius: '20px', fontSize: '16px', cursor: 'pointer', fontWeight: 'bold', marginTop: '20px' }
 };
 
-export default function IniciarReserva() {
+export default function ReservaCoordenacao() {
     const navigate = useNavigate();
     
-    // Dados do usuário logado
-    const [usuario, setUsuario] = useState(null);
+    const [usuarioLogado, setUsuarioLogado] = useState(null);
     
-    // Listas vindas do Backend
     const [salas, setSalas] = useState([]);
+    const [professores, setProfessores] = useState([]);
     const [equipamentosLista, setEquipamentosLista] = useState([]);
 
-    // Seleções do formulário
     const [salaSelecionada, setSalaSelecionada] = useState('');
+    const [professorSelecionado, setProfessorSelecionado] = useState('');
     const [dataSelecionada, setDataSelecionada] = useState('');
     const [horarioSelecionado, setHorarioSelecionado] = useState(null);
     
-    // Lógica do Equipamento
     const [equipamento, setEquipamento] = useState(false);
     const [equipamentoSelecionado, setEquipamentoSelecionado] = useState('');
     
-    // Controle de horários ocupados
     const [horariosOcupados, setHorariosOcupados] = useState([]);
 
     const horariosFixos = [
@@ -45,14 +42,12 @@ export default function IniciarReserva() {
 
     useEffect(() => {
         const userStorage = localStorage.getItem('user');
-        if (userStorage) {
-            setUsuario(JSON.parse(userStorage));
-        } else {
-            navigate('/');
-        }
+        if (userStorage) setUsuarioLogado(JSON.parse(userStorage));
+        else navigate('/');
 
         api.get('/salas').then(res => setSalas(res.data));
         api.get('/equipamentos').then(res => setEquipamentosLista(res.data));
+        api.get('/professores').then(res => setProfessores(res.data));
     }, []);
 
     useEffect(() => {
@@ -70,19 +65,19 @@ export default function IniciarReserva() {
             alert("Este horário já está reservado!");
             return;
         }
-        if (!salaSelecionada || !dataSelecionada) {
-            alert("Por favor, selecione uma Sala e uma Data antes de escolher o horário.");
+        if (!salaSelecionada || !dataSelecionada || !professorSelecionado) {
+            alert("Selecione Sala, Professor e Data primeiro.");
             return;
         }
         setHorarioSelecionado(horario);
     };
 
     const confirmarReserva = async () => {
-        if (!salaSelecionada || !dataSelecionada || !horarioSelecionado) {
-            alert("Preencha todos os dados!");
-            return;
+        if (!salaSelecionada || !dataSelecionada || !horarioSelecionado || !professorSelecionado) {
+            alert("Preencha todos os dados!"); return;
         }
 
+        // Validação do Equipamento
         if (equipamento && !equipamentoSelecionado) {
             alert("Você marcou que quer equipamento, mas não selecionou qual!");
             return;
@@ -93,17 +88,17 @@ export default function IniciarReserva() {
         const payload = {
             dataReserva: dataISO,
             sala: { id: salaSelecionada },
-            professor: { idProfessor: usuario.id }, // Usa o ID do professor logado
-            criadaPor: "PROFESSOR",
+            professor: { idProfessor: professorSelecionado },
+            coordenacao: { idCoordenacao: usuarioLogado.id },
+            criadaPor: "COORDENACAO",
             equipamento: (equipamento && equipamentoSelecionado) ? { id: equipamentoSelecionado } : null
         };
 
         try {
             await api.post('/reservas', payload);
-            alert("Reserva realizada com sucesso!");
-            navigate('/home');
+            alert("Reserva realizada com sucesso pela Coordenação!");
+            navigate('/home-coordenacao');
         } catch (error) {
-            console.error(error);
             const msg = error.response?.data || "Erro ao realizar reserva.";
             alert(msg);
         }
@@ -114,28 +109,36 @@ export default function IniciarReserva() {
             <div style={styles.sidebar}>
                 <div>
                     <h1 style={{fontSize: '24px', margin: 0}}>UNIRIO</h1>
-                    <p style={{fontSize: '12px'}}>Sistema de Reservas</p>
+                    <p style={{fontSize: '12px'}}>Área da Coordenação</p>
                 </div>
                 <div>
-                    <div style={{marginBottom: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px'}} onClick={() => navigate('/home')}>
-                        <span>🏠</span> PÁGINA INICIAL
-                    </div>
-                    <div style={{cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px'}} onClick={() => navigate(-1)}>
-                        <span>↩</span> VOLTAR
-                    </div>
+                    <div style={{marginBottom: '10px', cursor: 'pointer'}} onClick={() => navigate('/home-coordenacao')}>🏠 PÁGINA INICIAL</div>
+                    <div style={{cursor: 'pointer'}} onClick={() => navigate(-1)}>↩ VOLTAR</div>
                 </div>
             </div>
 
             <div style={styles.content}>
                 {!horarioSelecionado ? (
                     <>
-                        <h1 style={{textAlign: 'right', fontWeight: 'normal', marginBottom: '40px'}}>Realizar Reserva</h1>
+                        <h1 style={{textAlign: 'right', fontWeight: 'normal', marginBottom: '40px'}}>Reserva Administrativa</h1>
                         
                         <div style={styles.header}>
-                            <div style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
-                                <span style={{fontSize: '18px'}}>Sala:</span>
+                            <div style={{display:'flex', flexDirection:'column', gap:'5px'}}>
+                                <span style={{fontSize: '16px'}}>Professor Responsável:</span>
                                 <select 
-                                    style={{padding: '5px 10px', borderRadius: '15px', border: '1px solid #ccc', backgroundColor: '#D9D9D9'}}
+                                    style={{padding: '5px', borderRadius: '5px', width: '200px'}}
+                                    onChange={(e) => setProfessorSelecionado(e.target.value)}
+                                    value={professorSelecionado}
+                                >
+                                    <option value="">Selecione...</option>
+                                    {professores.map(p => <option key={p.idProfessor} value={p.idProfessor}>{p.nomeProfessor}</option>)}
+                                </select>
+                            </div>
+
+                            <div style={{display:'flex', flexDirection:'column', gap:'5px'}}>
+                                <span style={{fontSize: '16px'}}>Sala:</span>
+                                <select 
+                                    style={{padding: '5px', borderRadius: '5px', width: '200px'}}
                                     onChange={(e) => setSalaSelecionada(e.target.value)}
                                     value={salaSelecionada}
                                 >
@@ -143,14 +146,10 @@ export default function IniciarReserva() {
                                     {salas.map(s => <option key={s.id} value={s.id}>{s.nome}</option>)}
                                 </select>
                             </div>
-                            <div style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
-                                <span style={{fontSize: '18px'}}>Dia:</span>
-                                <input 
-                                    type="date" 
-                                    style={{padding: '5px 10px', borderRadius: '15px', border: '1px solid #ccc', backgroundColor: '#D9D9D9'}}
-                                    onChange={(e) => setDataSelecionada(e.target.value)} 
-                                    value={dataSelecionada}
-                                />
+
+                            <div style={{display:'flex', flexDirection:'column', gap:'5px'}}>
+                                <span style={{fontSize: '16px'}}>Data:</span>
+                                <input type="date" onChange={(e) => setDataSelecionada(e.target.value)} value={dataSelecionada} />
                             </div>
                         </div>
 
@@ -163,8 +162,8 @@ export default function IniciarReserva() {
                                         style={{...styles.slot, ...(estaOcupado ? styles.ocupado : styles.vago)}}
                                         onClick={() => selecionarHorario(h.inicio)}
                                     >
-                                        <span style={{fontSize: '18px'}}>{h.inicio}</span>
-                                        <span style={{fontSize: '18px'}}>{estaOcupado ? "OCUPADO" : "Vago"}</span>
+                                        <span>{h.inicio}</span>
+                                        <span>{estaOcupado ? "OCUPADO" : "Disponível"}</span>
                                         <span></span>
                                     </div>
                                 );
@@ -174,26 +173,22 @@ export default function IniciarReserva() {
                 ) : (
                     <div style={{display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%'}}>
                         <div style={styles.modal}>
-                            <h1 style={{textAlign: 'right', fontWeight: 'normal'}}>Confirmar Reserva</h1>
+                            <h1 style={{textAlign: 'right'}}>Confirmar (Modo Coordenação)</h1>
+                            <p><b>Professor:</b> {professores.find(p => p.idProfessor == professorSelecionado)?.nomeProfessor}</p>
+                            <p><b>Sala:</b> {salas.find(s => s.id == salaSelecionada)?.nome}</p>
+                            <p><b>Data:</b> {dataSelecionada} às {horarioSelecionado}</p>
                             
-                            <div style={{display: 'flex', justifyContent: 'space-between', margin: '20px 0', fontSize: '18px'}}>
-                                <span>Sala {salas.find(s => s.id == salaSelecionada)?.nome}</span>
-                                <span>Data: {dataSelecionada} {horarioSelecionado}</span>
-                            </div>
-
-                            {/* --- ÁREA DO EQUIPAMENTO --- */}
-                            <div style={{backgroundColor: '#D9D9D9', padding: '20px', borderRadius: '15px', display: 'flex', flexDirection: 'column', gap: '15px'}}>
-                                <div style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
-                                    <span>Reservar Equipamento:</span>
-                                    <div style={{display: 'flex', gap: '5px'}}>
-                                        <button onClick={() => setEquipamento(true)} style={{cursor:'pointer', border:'1px solid #333', background: equipamento ? '#88B083' : '#fff'}}>✅</button>
-                                        <button onClick={() => setEquipamento(false)} style={{cursor:'pointer', border:'1px solid #333', background: !equipamento ? '#FFB3B3' : '#fff'}}>❎</button>
-                                    </div>
+                            {/* --- ÁREA DO EQUIPAMENTO (ADICIONADA AGORA) --- */}
+                            <div style={{backgroundColor: '#D9D9D9', padding: '15px', borderRadius: '10px', margin: '20px 0'}}>
+                                <div style={{display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px'}}>
+                                    <span>Reservar Equipamento?</span>
+                                    <button onClick={() => setEquipamento(true)} style={{cursor:'pointer', border:'1px solid #333', background: equipamento ? '#88B083' : '#fff'}}>SIM</button>
+                                    <button onClick={() => setEquipamento(false)} style={{cursor:'pointer', border:'1px solid #333', background: !equipamento ? '#FFB3B3' : '#fff'}}>NÃO</button>
                                 </div>
                                 
                                 {equipamento && (
                                     <select 
-                                        style={{padding: '10px', borderRadius: '10px', border: 'none'}}
+                                        style={{padding: '8px', borderRadius: '5px', width: '100%'}}
                                         onChange={(e) => setEquipamentoSelecionado(e.target.value)}
                                         value={equipamentoSelecionado}
                                     >
@@ -204,14 +199,10 @@ export default function IniciarReserva() {
                                     </select>
                                 )}
                             </div>
-                            {/* --------------------------- */}
+                            {/* --------------------------------------------- */}
 
-                            <div style={{textAlign: 'center', marginTop: '20px'}}>
-                                <button style={styles.btnConfirmar} onClick={confirmarReserva}>Confirmar</button>
-                                <div style={{marginTop: '10px'}}>
-                                    <span style={{cursor: 'pointer', textDecoration: 'underline'}} onClick={() => setHorarioSelecionado(null)}>Cancelar</span>
-                                </div>
-                            </div>
+                            <button style={styles.btnConfirmar} onClick={confirmarReserva}>Confirmar</button>
+                            <button onClick={() => setHorarioSelecionado(null)} style={{display:'block', margin:'10px auto', border:'none', background:'none', textDecoration:'underline', cursor:'pointer'}}>Cancelar</button>
                         </div>
                     </div>
                 )}

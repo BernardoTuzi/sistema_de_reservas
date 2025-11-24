@@ -16,27 +16,48 @@ public class ReservaController {
     private ReservaService reservaService;
 
     @GetMapping
-    public List<Reserva> listarTodas() {
-        return reservaService.listarTodas();
+    public List<Reserva> listarTodas() { return reservaService.listarTodas(); }
+
+    @GetMapping("/professor/{id}")
+    public List<Reserva> listarPorProfessor(@PathVariable Integer id) { return reservaService.buscarPorProfessor(id); }
+
+    @GetMapping("/lotacao")
+    public List<Integer> getDiasLotados(@RequestParam Integer salaId, @RequestParam int mes, @RequestParam int ano) {
+        return reservaService.buscarDiasLotados(salaId, mes, ano);
     }
 
-    // Este é o método que a página "Minhas Reservas" precisa
-    @GetMapping("/professor/{id}")
-    public List<Reserva> listarPorProfessor(@PathVariable Integer id) {
-        return reservaService.buscarPorProfessor(id);
+    @GetMapping("/ocupadas")
+    public List<String> getHorariosOcupados(@RequestParam Integer salaId, @RequestParam String data) {
+        return reservaService.buscarHorariosOcupados(salaId, data);
     }
 
     @PostMapping
     public ResponseEntity<?> criar(@RequestBody Reserva reserva) {
         try {
-            Reserva novaReserva = reservaService.criarReserva(reserva);
-            return ResponseEntity.ok(novaReserva);
+            return ResponseEntity.ok(reservaService.criarReserva(reserva));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
-    @GetMapping("/ocupadas")
-    public List<String> getHorariosOcupados(@RequestParam Integer salaId, @RequestParam String data) {
-        return reservaService.buscarHorariosOcupados(salaId, data);
+
+    // --- NOVO: EDITAR ---
+    @PutMapping("/{id}")
+    public ResponseEntity<?> editar(@PathVariable Integer id, @RequestBody Reserva reserva) {
+        try {
+            return ResponseEntity.ok(reservaService.atualizarReserva(id, reserva));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+    // --------------------
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> cancelar(@PathVariable Integer id, @RequestParam(defaultValue = "false") boolean isCoordenacao) {
+        try {
+            reservaService.cancelarReserva(id, isCoordenacao);
+            return ResponseEntity.ok("Cancelada com sucesso.");
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 }

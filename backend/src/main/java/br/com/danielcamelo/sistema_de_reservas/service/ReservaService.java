@@ -1,13 +1,7 @@
 package br.com.danielcamelo.sistema_de_reservas.service;
 
-import br.com.danielcamelo.sistema_de_reservas.entity.Equipamento;
-import br.com.danielcamelo.sistema_de_reservas.entity.Professor;
-import br.com.danielcamelo.sistema_de_reservas.entity.Reserva;
-import br.com.danielcamelo.sistema_de_reservas.entity.Sala;
-import br.com.danielcamelo.sistema_de_reservas.repository.EquipamentoRepository;
-import br.com.danielcamelo.sistema_de_reservas.repository.ProfessorRepository;
-import br.com.danielcamelo.sistema_de_reservas.repository.ReservaRepository;
-import br.com.danielcamelo.sistema_de_reservas.repository.SalaRepository;
+import br.com.danielcamelo.sistema_de_reservas.entity.*;
+import br.com.danielcamelo.sistema_de_reservas.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -27,99 +21,98 @@ public class ReservaService {
     @Autowired
     private EquipamentoRepository equipamentoRepository;
 
-    public List<Reserva> listarTodas() {
-        return reservaRepository.findAll();
-    }
+    public List<Reserva> listarTodas() { return reservaRepository.findAll(); }
+    public Reserva buscarPorId(Integer id) { return reservaRepository.findById(id).orElse(null); }
 
-    public Reserva buscarPorId(Integer id) {
-        return reservaRepository.findById(id).orElse(null);
-    }
-
-    // O método que o Controller chama
     public List<Reserva> buscarPorProfessor(Integer idProfessor) {
         Professor professor = professorRepository.findById(idProfessor).orElse(null);
         if (professor == null) return Collections.emptyList();
         return reservaRepository.findByProfessor(professor);
     }
 
-    public Reserva criarReserva(Reserva novaReserva) {
-        // ... (Busca de Sala, Professor e Equipamento continuam iguais aqui em cima) ...
-
-        // 1. Buscar a Sala Real (Código que já existia)
-        if (novaReserva.getSala() != null && novaReserva.getSala().getId() != null) {
-            Sala salaReal = salaRepository.findById(novaReserva.getSala().getId())
-                    .orElseThrow(() -> new RuntimeException("Sala não encontrada"));
-            novaReserva.setSala(salaReal);
-        } else {
-            throw new RuntimeException("A sala é obrigatória.");
-        }
-
-        // ... (Busca de Professor e Equipamento continuam iguais) ...
-        if (novaReserva.getProfessor() != null && novaReserva.getProfessor().getIdProfessor() != null) {
-            Professor profReal = professorRepository.findById(novaReserva.getProfessor().getIdProfessor())
-                    .orElseThrow(() -> new RuntimeException("Professor não encontrado"));
-            novaReserva.setProfessor(profReal);
-        }
-
-        if (novaReserva.getEquipamento() != null && novaReserva.getEquipamento().getId() != null) {
-            Equipamento equipReal = equipamentoRepository.findById(novaReserva.getEquipamento().getId())
-                    .orElseThrow(() -> new RuntimeException("Equipamento não encontrado"));
-            novaReserva.setEquipamento(equipReal);
-        } else {
-            novaReserva.setEquipamento(null);
-        }
-
-        // Validação de Data
-        if (novaReserva.getDataReserva() == null) {
-            throw new RuntimeException("A data da reserva é obrigatória.");
-        }
-
-        // --- NOVA REGRA: CONFLITO DE HORÁRIO ---
-        // Verifica se JÁ EXISTE uma reserva para esta Sala nesta Data/Hora
-        boolean jaReservado = reservaRepository.existsBySalaAndDataReserva(
-                novaReserva.getSala(),
-                novaReserva.getDataReserva()
-        );
-
-        if (jaReservado) {
-            throw new RuntimeException("Esta sala já está reservada para este horário!");
-        }
-        // ---------------------------------------
-
-        // Regra: Limite de 2 reservas (Continua igual)
-        List<Reserva> reservasDoProf = reservaRepository.findByProfessor(novaReserva.getProfessor());
-        long reservasFuturas = reservasDoProf.stream()
-                .filter(r -> r.getDataReserva().isAfter(LocalDateTime.now()))
-                .count();
-
-        if (reservasFuturas >= 2) {
-            throw new RuntimeException("Este professor já atingiu o limite de 2 reservas futuras.");
-        }
-
-        return reservaRepository.save(novaReserva);
-    }
-    public List<String> buscarHorariosOcupados(Integer idSala, String dataTexto) {
-        // dataTexto vem como "2025-11-25"
-
-        // 1. Definir o intervalo do dia (00:00 até 23:59)
-        LocalDateTime inicioDia = LocalDateTime.parse(dataTexto + "T00:00:00");
-        LocalDateTime fimDia = LocalDateTime.parse(dataTexto + "T23:59:59");
-
-        // 2. Buscar a Sala
+    public List<Integer> buscarDiasLotados(Integer idSala, int mes, int ano) {
         Sala sala = salaRepository.findById(idSala).orElse(null);
         if (sala == null) return Collections.emptyList();
+        List<Integer> diasLotados = new java.util.ArrayList<>();
+        int totalDias = java.time.YearMonth.of(ano, mes).lengthOfMonth();
+        for (int dia = 1; dia <= totalDias; dia++) {
+            LocalDateTime inicioDia = LocalDateTime.of(ano, mes, dia, 0, 0);
+            LocalDateTime fimDia = LocalDateTime.of(ano, mes, dia, 23, 59);
+            if (reservaRepository.countBySalaAndDataReservaBetween(sala, inicioDia, fimDia) >= 4) diasLotados.add(dia);
+        }
+        return diasLotados;
+    }
 
-        // 3. Buscar reservas
-        List<Reserva> reservas = reservaRepository.findBySalaAndDataReservaBetween(sala, inicioDia, fimDia);
-
-        // 4. Transformar a lista de Reservas apenas numa lista de "HORAS" (ex: "14:00")
-        return reservas.stream()
-                .map(r -> {
-                    // Pega a hora e minuto e formata (Ex: 14:00)
-                    String hora = String.format("%02d:%02d", r.getDataReserva().getHour(), r.getDataReserva().getMinute());
-                    return hora;
-                })
+    public List<String> buscarHorariosOcupados(Integer idSala, String dataTexto) {
+        LocalDateTime inicioDia = LocalDateTime.parse(dataTexto + "T00:00:00");
+        LocalDateTime fimDia = LocalDateTime.parse(dataTexto + "T23:59:59");
+        Sala sala = salaRepository.findById(idSala).orElse(null);
+        if (sala == null) return Collections.emptyList();
+        return reservaRepository.findBySalaAndDataReservaBetween(sala, inicioDia, fimDia).stream()
+                .map(r -> String.format("%02d:%02d", r.getDataReserva().getHour(), r.getDataReserva().getMinute()))
                 .toList();
     }
 
+    public Reserva criarReserva(Reserva novaReserva) {
+        validarDadosReserva(novaReserva); // Extraí a lógica para reutilizar
+
+        if (reservaRepository.existsBySalaAndDataReserva(novaReserva.getSala(), novaReserva.getDataReserva())) {
+            throw new RuntimeException("Esta sala já está reservada para este horário!");
+        }
+
+        validarLimiteProfessor(novaReserva);
+
+        return reservaRepository.save(novaReserva);
+    }
+
+    // --- NOVO MÉTODO: ATUALIZAR ---
+    public Reserva atualizarReserva(Integer id, Reserva dadosAtualizados) {
+        Reserva reservaExistente = buscarPorId(id);
+        if (reservaExistente == null) throw new RuntimeException("Reserva não encontrada.");
+
+        // Atualiza os dados do objeto existente
+        validarDadosReserva(dadosAtualizados); // Busca Sala/Equipamento reais no banco
+
+        // Copia os dados novos para a reserva antiga
+        reservaExistente.setSala(dadosAtualizados.getSala());
+        reservaExistente.setEquipamento(dadosAtualizados.getEquipamento());
+        // Nota: Não mudamos Data nem Professor na edição simplificada, mas se quiser mudar sala, precisa checar conflito.
+
+        // Checa conflito IGNORANDO a própria reserva (id)
+        if (reservaRepository.existsBySalaAndDataReservaAndIdNot(dadosAtualizados.getSala(), reservaExistente.getDataReserva(), id)) {
+            throw new RuntimeException("A nova sala escolhida já está ocupada neste horário!");
+        }
+
+        return reservaRepository.save(reservaExistente);
+    }
+
+    // Métodos auxiliares para não repetir código
+    private void validarDadosReserva(Reserva r) {
+        if (r.getSala() != null && r.getSala().getId() != null) {
+            r.setSala(salaRepository.findById(r.getSala().getId()).orElseThrow(() -> new RuntimeException("Sala não encontrada")));
+        }
+        if (r.getEquipamento() != null && r.getEquipamento().getId() != null) {
+            r.setEquipamento(equipamentoRepository.findById(r.getEquipamento().getId()).orElseThrow(() -> new RuntimeException("Equipamento não encontrado")));
+        } else {
+            r.setEquipamento(null);
+        }
+        if (r.getProfessor() != null && r.getProfessor().getIdProfessor() != null) {
+            r.setProfessor(professorRepository.findById(r.getProfessor().getIdProfessor()).orElseThrow(() -> new RuntimeException("Professor não encontrado")));
+        }
+    }
+
+    private void validarLimiteProfessor(Reserva r) {
+        long reservasFuturas = reservaRepository.findByProfessor(r.getProfessor()).stream()
+                .filter(res -> res.getDataReserva().isAfter(LocalDateTime.now()))
+                .count();
+        if (reservasFuturas >= 2) throw new RuntimeException("Limite de 2 reservas atingido.");
+    }
+
+    public void cancelarReserva(Integer idReserva, boolean isCoordenacao) {
+        Reserva reserva = reservaRepository.findById(idReserva).orElseThrow(() -> new RuntimeException("Não encontrada"));
+        if (!isCoordenacao && LocalDateTime.now().plusHours(24).isAfter(reserva.getDataReserva())) {
+            throw new RuntimeException("Cancelamento não permitido (regra 24h).");
+        }
+        reservaRepository.delete(reserva);
+    }
 }
